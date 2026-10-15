@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de Rescisão CLT</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--ink:#14282c;--mut:#5b6e71;--line:#d9e1e0;--acc:#0e6b66;--accT:#fff;--gold:#b97a0c;--ok:#0e6b66;--bad:#a63a2b;--soft:#e7f1ef;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b1d;--card:#172a2d;--ink:#e8f0ef;--mut:#9fb4b6;--line:#2a4246;--acc:#4cc2b8;--accT:#08201e;--gold:#e6a93b;--ok:#4cc2b8;--bad:#ef8b7c;--soft:#1d3639}}
+:root[data-theme="dark"]{--bg:#0f1b1d;--card:#172a2d;--ink:#e8f0ef;--mut:#9fb4b6;--line:#2a4246;--acc:#4cc2b8;--accT:#08201e;--gold:#e6a93b;--ok:#4cc2b8;--bad:#ef8b7c;--soft:#1d3639}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Source Sans 3",system-ui,sans-serif}
+.w{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.15;margin:0 0 .5em}
+h1{font-size:clamp(1.9rem,5vw,2.8rem);font-weight:800}
+h2{font-size:1.3rem}
+.sub{color:var(--mut);max-width:62ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:16px 0}
+.g{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+label{display:block;font-size:.9rem;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:130px;font-size:.9rem}
+button{font:600 1rem "Source Sans 3",sans-serif;padding:10px 16px;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:var(--accT);cursor:pointer}
+button.s{background:transparent;color:var(--acc)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.fer{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:.95rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.97rem}
+td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.v,th.v{text-align:right;white-space:nowrap}
+.n{display:block;color:var(--mut);font-size:.82rem}
+.big{background:var(--soft);border-radius:10px;padding:16px;margin:14px 0}
+.big b{display:block;font:800 clamp(1.8rem,6vw,2.6rem) "Bricolage Grotesque",sans-serif;color:var(--acc)}
+.al{border-left:4px solid var(--gold);padding:8px 12px;margin:8px 0;background:var(--soft);border-radius:0 6px 6px 0;font-size:.95rem}
+.neg{color:var(--bad)}
+.promo{border:2px solid var(--gold)}
+.promo a.b{display:inline-block;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;margin:4px 8px 4px 0}
+small{color:var(--mut)}
+@media print{body{background:#fff;color:#000}.noprint{display:none!important}.card{border-color:#999}}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>Simulador de rescisão CLT</h1>
+<p class="sub">Descubra quanto você receberia se saísse da empresa em uma data escolhida: saldo de salário, aviso prévio, 13º, férias vencidas e proporcionais, multa do FGTS e descontos. Seus dados ficam só no seu navegador.</p>
+
+<section class="card noprint">
+<h2>1. Dados da Carteira de Trabalho Digital</h2>
+<p class="sub">Anexe o PDF da CTPS Digital ou cole o texto das anotações (admissão, salários e férias). Ou preencha tudo à mão abaixo.</p>
+<div class="row"><input type="file" id="arq" accept=".pdf,.txt" aria-label="Anexar PDF ou TXT"></div>
+<label for="txt" style="margin-top:10px">Texto copiado da carteira</label>
+<textarea id="txt" placeholder="Cole aqui: 02/09/2024 - Admissão ... 29/09/2026 - Salário definido para R$ 11.260,49 Por mês ... Férias 08/06/2026 a 22/06/2026 Período aquisitivo: 02/09/2024 a 01/09/2025"></textarea>
+<div class="row"><button id="ler">Ler dados do texto</button><button class="s" id="ex">Carregar exemplo</button><span id="msg" class="sub"></span></div>
+</section>
+
+<section class="card noprint">
+<h2>2. Dados da simulação</h2>
+<div class="g">
+<div><label for="adm">Data de admissão</label><input type="date" id="adm"></div>
+<div><label for="sai">Data de saída (último dia)</label><input type="date" id="sai"></div>
+<div><label for="sal">Salário mensal (R$)</label><input type="number" id="sal" step="0.01" min="0" inputmode="decimal"></div>
+<div><label for="tipo">Tipo de rescisão</label><select id="tipo"><option value="sjc">Dispensa sem justa causa</option><option value="ped">Pedido de demissão</option><option value="acordo">Acordo (art. 484-A)</option><option value="jc">Justa causa</option></select></div>
+<div><label for="av">Aviso prévio</label><select id="av"><option value="ind">Indenizado (pago, sem trabalhar)</option><option value="trab">Trabalhado</option><option value="nao">Não cumprido pelo empregado (desconto)</option><option value="disp">Dispensado / não se aplica</option></select></div>
+<div><label for="dep">Dependentes (IR)</label><input type="number" id="dep" min="0" value="0"></div>
+<div><label for="fg">Saldo atual do FGTS (opcional)</label><input type="number" id="fg" step="0.01" min="0" placeholder="Deixe vazio para estimar"></div>
+</div>
+<h3 style="margin-top:18px">Férias já gozadas</h3>
+<div id="fl"></div>
+<div class="g" style="margin-top:10px">
+<div><label for="fs">Início do gozo</label><input type="date" id="fs"></div>
+<div><label for="fe">Fim do gozo</label><input type="date" id="fe"></div>
+<div><label for="fp">Início do período aquisitivo (opcional)</label><input type="date" id="fp"></div>
+</div>
+<div class="row"><button class="s" id="addf">Adicionar férias</button></div>
+<div class="row"><button id="calc">Calcular rescisão</button></div>
+</section>
+
+<section id="res" class="card" hidden aria-live="polite"></section>
+
+<section class="card promo noprint">
+<h2>O que fazer com o dinheiro da rescisão?</h2>
+<p>Receber a rescisão é um momento delicado: o valor parece grande, mas some rápido sem um plano. Se você quer saber como investir esse dinheiro, montar uma reserva de emergência, sair das dívidas e organizar sua vida financeira para ter segurança e construir patrimônio, eu posso ajudar.</p>
+<p><b>Frederico Sarmento</b> · engenheiro com mais de 10 anos de experiência e mestrando em Engenharia Ambiental e Sanitária. Atendo com orientação de educação financeira, organização do orçamento e primeiros passos nos investimentos, em linguagem simples e sem promessa de ganho fácil.</p>
+<a class="b" style="background:var(--acc);color:var(--accT)" href="https://wa.me/5522981340239?text=Ol%C3%A1%2C%20usei%20o%20simulador%20de%20rescis%C3%A3o%20e%20quero%20organizar%20minha%20vida%20financeira" target="_blank" rel="noopener">Falar no WhatsApp: (22) 98134-0239</a>
+<a class="b" style="border:1px solid var(--acc);color:var(--acc)" href="mailto:famrsarmento@gmail.com">famrsarmento@gmail.com</a>
+</section>
+
+<p><small>Simulação estimada, sem valor legal. Valores finais dependem de convenção coletiva, médias de horas extras e comissões, faltas, adicionais e do cálculo oficial da empresa (TRCT). Tabelas de INSS e IRRF de 2026 usadas aqui devem ser conferidas e atualizadas pelo autor sempre que mudarem. Não substitui orientação de contador ou advogado trabalhista.</small></p>
+</div>
+
+<script>
+const $=i=>document.getElementById(i),DAY=864e5;
+const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const D=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d))};
+const fmt=d=>d.toISOString().slice(0,10).split('-').reverse().join('/');
+const iso=s=>{const[a,b,c]=s.split('/');return c+'-'+b+'-'+a};
+const num=s=>parseFloat(s.replace(/\./g,'').replace(',','.'));
+const r2=v=>Math.round(v*100)/100;
+function addM(d,n){const y=d.getUTCFullYear(),m=d.getUTCMonth()+n,l=new Date(Date.UTC(y,m+1,0)).getUTCDate();return new Date(Date.UTC(y,m,Math.min(d.getUTCDate(),l)))}
+function inss(b){let p=0,t=0;for(const[l,a]of [[1621,.075],[2902.84,.09],[4354.27,.12],[8475.55,.14]]){if(b>p){t+=(Math.min(b,l)-p)*a;p=l}}return r2(t)}
+function irrf(bruto,ins,dep,red){const b=bruto-Math.max(ins+dep*189.59,564.8);if(b<=0)return 0;let i;
+ if(b<=2428.8)i=0;else if(b<=2826.65)i=b*.075-182.16;else if(b<=3751.05)i=b*.15-394.16;else if(b<=4664.68)i=b*.225-675.49;else i=b*.275-908.73;
+ if(red){if(bruto<=5000)i=0;else if(bruto<=7350)i-=978.62-0.133145*bruto}
+ return Math.max(0,r2(i))}
+let fer=[],hist=null;
+const EX=`Tipo de contrato Prazo indeterminado Salário contratual R$ 11.260,49 por mês ANOTAÇÕES 29/09/2026 - Salário definido para R$ 11.260,49 Por mês 08/06/2026 - Férias 08/06/2026 a 22/06/2026 Período aquisitivo: 02/09/2024 a 01/09/2025 06/04/2026 - Férias 06/04/2026 a 20/04/2026 Período aquisitivo: 02/09/2024 a 01/09/2025 24/10/2025 - Salário definido para R$ 10.827,40 Por mês 02/09/2024 - Salário definido para R$ 10.302,00 Por mês 02/09/2024 - Admissão`;
+function parse(t){t=t.replace(/\s+/g,' ');const o={};
+ o.sal=[...t.matchAll(/(\d{2}\/\d{2}\/\d{4}) - Salário definido para R\$ ([\d.]+,\d{2})/g)].map(x=>({d:iso(x[1]),v:num(x[2])})).sort((a,b)=>a.d<b.d?-1:1);
+ if(!o.sal.length){const c=t.match(/Salário contratual R\$ ([\d.]+,\d{2})/);if(c)o.sal=[{d:null,v:num(c[1])}]}
+ const a=t.match(/(\d{2}\/\d{2}\/\d{4}) - Admissão/);if(a)o.adm=iso(a[1]);
+ const k=new Set();o.fer=[];
+ for(const x of t.matchAll(/Férias (\d{2}\/\d{2}\/\d{4}) a (\d{2}\/\d{2}\/\d{4}) Período aquisitivo: (\d{2}\/\d{2}\/\d{4})/g)){const key=x[1]+x[2]+x[3];if(!k.has(key)){k.add(key);o.fer.push({s:iso(x[1]),e:iso(x[2]),p:iso(x[3])})}}
+ o.det=/prazo determinado/i.test(t)&&!/indeterminado/i.test(t);return o}
+function aplicar(t){const o=parse(t),m=[];
+ if(o.adm){$('adm').value=o.adm;m.push('admissão')}
+ if(o.sal.length){hist=o.sal;$('sal').value=o.sal[o.sal.length-1].v;m.push('salário (R$ '+o.sal[o.sal.length-1].v.toLocaleString('pt-BR',{minimumFractionDigits:2})+')')}
+ if(o.fer.length){fer=o.fer;rf();m.push(o.fer.length+' período(s) de férias')}
+ $('msg').textContent=m.length?'Encontrado: '+m.join(', ')+'.':'Não encontrei dados reconhecíveis. Preencha à mão.';
+ if(o.det)$('msg').textContent+=' Atenção: contrato por prazo determinado, regras diferentes.'}
+$('ler').onclick=()=>aplicar($('txt').value);
+$('ex').onclick=()=>{$('txt').value=EX;aplicar(EX)};
+$('arq').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+ try{if(/\.txt$/i.test(f.name)){$('txt').value=await f.text()}else{
+  const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await lib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;let t='';
+  for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);t+=(await p.getTextContent()).items.map(x=>x.str).join(' ')+' '}
+  $('txt').value=t}
+  aplicar($('txt').value)}catch(err){$('msg').textContent='Não consegui ler o arquivo. Copie o texto da carteira e cole na caixa acima.'}};
+function rf(){$('fl').innerHTML=fer.length?'':'<small>Nenhuma férias informada.</small>';
+ fer.forEach((f,i)=>{const d=document.createElement('div');d.className='fer';
+  d.innerHTML='<span>'+fmt(D(f.s))+' a '+fmt(D(f.e))+' ('+((D(f.e)-D(f.s))/DAY+1)+' dias)'+(f.p?' · período aquisitivo iniciado em '+fmt(D(f.p)):'')+'</span>';
+  const b=document.createElement('button');b.className='s';b.textContent='Remover';b.onclick=()=>{fer.splice(i,1);rf()};d.appendChild(b);$('fl').appendChild(d)})}
+$('addf').onclick=()=>{if(!$('fs').value||!$('fe').value||$('fe').value<$('fs').value){$('msg').textContent='Informe início e fim do gozo válidos.';return}
+ fer.push({s:$('fs').value,e:$('fe').value,p:$('fp').value||null});$('fs').value=$('fe').value=$('fp').value='';rf()};
+$('sal').oninput=()=>{hist=null};
+$('sai').value=new Date().toISOString().slice(0,10);rf();
+
+function meses13(adm,dp){const y=dp.getUTCFullYear();let c=0;
+ for(let m=0;m<12;m++){const s=Math.max(Date.UTC(y,m,1),adm.getTime()),e=Math.min(Date.UTC(y,m+1,0),dp.getTime());if(e>=s&&(e-s)/DAY+1>=15)c++}return c}
+function mesesAq(ini,dp){const fim=dp.getTime()+DAY;let m=0;while(addM(ini,m+1).getTime()<=fim)m++;if((fim-addM(ini,m).getTime())/DAY>=15)m++;return Math.min(m,12)}
+function salAt(d,sal){if(!hist||hist[hist.length-1].v!==sal)return sal;let v=hist[0].v;for(const h of hist){if(!h.d||h.d<=d)v=h.v}return v}
+
+$('calc').onclick=()=>{
+ const R=$('res');R.hidden=false;
+ const sal=parseFloat($('sal').value);
+ if(!$('adm').value||!$('sai').value||!(sal>0)){R.innerHTML='<p class="neg">Preencha admissão, saída e salário.</p>';return}
+ const adm=D($('adm').value),sai=D($('sai').value),tipo=$('tipo').value,dep=+$('dep').value||0;
+ if(sai<adm){R.innerHTML='<p class="neg">A saída precisa ser depois da admissão.</p>';return}
+ let av=$('av').value;
+ if(tipo==='jc')av='disp';if(tipo==='ped'&&av==='ind')av='disp';if((tipo==='sjc'||tipo==='acordo')&&av==='nao')av='trab';
+ let anos=0;while(addM(adm,12*(anos+1)).getTime()<=sai.getTime()+DAY)anos++;
+ const avDias=tipo==='jc'?0:Math.min(90,30+3*anos);
+ const proj=av==='ind'&&(tipo==='sjc'||tipo==='acordo');
+ const dp=proj?new Date(sai.getTime()+avDias*DAY):sai;
+ const d=sal/30,P=[],X=[],al=[];
+ const diasS=Math.min(30,sai.getUTCDate());
+ const saldo=r2(d*diasS);P.push(['Saldo de salário',saldo,diasS+' dias de '+sai.toLocaleDateString('pt-BR',{month:'long',timeZone:'UTC'})]);
+ let avV=0;
+ if(proj){avV=r2(d*avDias*(tipo==='acordo'?.5:1));P.push(['Aviso prévio indenizado',avV,avDias+' dias'+(tipo==='acordo'?' (50% no acordo)':'')])}
+ let m13=0,v13=0;
+ if(tipo!=='jc'){m13=meses13(adm,dp);v13=r2(sal*m13/12);P.push(['13º salário proporcional',v13,m13+'/12 avos'+(proj?' (inclui projeção do aviso)':'')])}
+ // períodos
+ const per=[];for(let i=0;addM(adm,12*(i+1)).getTime()<=dp.getTime()+DAY;i++)per.push({i,ini:addM(adm,12*i),fim:new Date(addM(adm,12*(i+1)).getTime()-DAY),g:0});
+ const sem=[];
+ for(const f of fer){const dias=(D(f.e)-D(f.s))/DAY+1;let t=null;
+  if(f.p){const p=D(f.p);t=per.find(x=>Math.abs(x.ini-p)<=2*DAY)}
+  if(t)t.g+=dias;else sem.push(dias)}
+ for(const dias of sem){const t=per.find(x=>x.g<30);if(t)t.g+=dias}
+ let fv=0,fterco=0,tabF=[];
+ for(const p of per){const dev=Math.max(0,30-p.g);
+  tabF.push(fmt(p.ini)+' a '+fmt(p.fim)+': '+p.g+' dias gozados');
+  if(!dev)continue;
+  const limite=addM(new Date(p.fim.getTime()+DAY),12);
+  const dob=limite.getTime()<=sai.getTime();
+  const base=r2(d*dev*(dob?2:1));
+  P.push(['Férias vencidas ('+fmt(p.ini)+' a '+fmt(p.fim)+')',base,dev+' dias não gozados'+(dob?' · EM DOBRO (prazo para conceder venceu)':'')]);
+  P.push(['1/3 constitucional sobre férias vencidas',r2(base/3),'']);
+  fv+=base;fterco+=r2(base/3);
+  if(dob)al.push('Há férias vencidas depois do prazo de concessão (art. 137 da CLT): o cálculo já paga o período em dobro.')}
+ let fpM=0;
+ if(tipo!=='jc'){const ini=addM(adm,12*per.length);fpM=mesesAq(ini,dp);
+  if(fpM>0){const b=r2(sal*fpM/12);P.push(['Férias proporcionais',b,fpM+'/12 avos']);P.push(['1/3 sobre férias proporcionais',r2(b/3),''])}
+  if(tipo==='ped'&&false){}}
+ else al.push('Na justa causa não há 13º proporcional, férias proporcionais, aviso nem multa do FGTS. Só saldo de salário e férias vencidas.');
+ // descontos
+ const iS=inss(saldo),rS=irrf(saldo,iS,dep,true);
+ X.push(['INSS sobre saldo de salário',iS,'']);if(rS)X.push(['IRRF sobre saldo de salário',rS,'']);
+ let i13=0,r13=0;if(v13){i13=inss(v13);r13=irrf(v13,i13,dep,false);X.push(['INSS sobre 13º',i13,'']);if(r13)X.push(['IRRF sobre 13º (tributação exclusiva)',r13,''])}
+ let dAv=0;if(tipo==='ped'&&av==='nao'){dAv=r2(d*Math.min(30,avDias||30));X.push(['Desconto de aviso prévio não cumprido',dAv,'até 30 dias'])}
+ const tp=r2(P.reduce((a,x)=>a+x[1],0)),td=r2(X.reduce((a,x)=>a+x[1],0)),liq=r2(tp-td);
+ // FGTS
+ let fg=parseFloat($('fg').value),est=false;
+ if(!(fg>=0)){est=true;fg=0;for(let k=0;addM(adm,k).getTime()<=sai.getTime();k++){const s=addM(adm,k),e=new Date(Math.min(addM(adm,k+1).getTime()-DAY,sai.getTime()));const fr=Math.min(1,((e-s)/DAY+1)/30);fg+=.08*salAt(s.toISOString().slice(0,10),sal)*fr}fg=r2(fg)}
+ const dep8=tipo==='jc'?0:r2(.08*(saldo+v13+avV));
+ const perc=tipo==='sjc'?.4:tipo==='acordo'?.2:0;
+ const multa=r2(perc*(fg+dep8));
+ const saque=tipo==='ped'||tipo==='jc'?0:r2((fg+dep8)*(tipo==='acordo'?.8:1)+multa*0);
+ const total=r2(liq+multa);
+ const dias=Math.round((sai-adm)/DAY)+1;
+ const tc=Math.floor(dias/365.25)+' ano(s), '+Math.round((dias%365.25)/30.44)+' mês(es) aprox.';
+ if(tipo==='ped')al.push('No pedido de demissão não há multa de 40% nem saque do FGTS (o saldo continua na conta).');
+ if(tipo==='acordo')al.push('No acordo, a multa é de 20% e o saque do FGTS é limitado a 80% do saldo. Não dá direito a seguro-desemprego.');
+ if(tipo==='sjc')al.push('Dispensa sem justa causa dá direito a multa de 40%, saque do FGTS e seguro-desemprego, se cumprir os requisitos.');
+ if(est)al.push('Saldo do FGTS estimado em 8% do salário por mês (sem rendimentos, 13º e férias). Informe o saldo do extrato para um resultado mais fiel.');
+ al.push('Pagamento das verbas: até 10 dias corridos após o fim do contrato.');
+ const row=(a,hasN)=>a.map(x=>'<tr><td>'+x[0]+(x[2]?'<span class="n">'+x[2]+'</span>':'')+'</td><td class="v">'+brl(x[1])+'</td></tr>').join('');
+ R.innerHTML='<h2>Resultado da simulação</h2><p class="sub">Tempo de casa até '+fmt(sai)+': '+tc+' ('+dias+' dias). '+(proj?'Com aviso indenizado, o contrato é projetado até '+fmt(dp)+'.':'')+'</p>'
+ +'<div class="big"><small>Total a receber (rescisão líquida + multa do FGTS)</small><b>'+brl(total)+'</b></div>'
+ +'<div class="tw"><table><thead><tr><th>Proventos</th><th class="v">Valor</th></tr></thead><tbody>'+row(P)+'<tr><td><b>Total de proventos</b></td><td class="v"><b>'+brl(tp)+'</b></td></tr></tbody>'
+ +'<thead><tr><th>Descontos</th><th class="v">Valor</th></tr></thead><tbody>'+(X.length?row(X):'')+'<tr><td><b>Total de descontos</b></td><td class="v neg"><b>'+brl(td)+'</b></td></tr><tr><td><b>Rescisão líquida</b></td><td class="v"><b>'+brl(liq)+'</b></td></tr></tbody>'
+ +'<thead><tr><th>FGTS</th><th class="v">Valor</th></tr></thead><tbody><tr><td>Saldo do FGTS'+(est?' (estimado)':'')+'</td><td class="v">'+brl(fg)+'</td></tr><tr><td>Depósito do FGTS sobre verbas rescisórias (8%)</td><td class="v">'+brl(dep8)+'</td></tr><tr><td>Multa do FGTS ('+perc*100+'%), paga pela empresa</td><td class="v">'+brl(multa)+'</td></tr>'
+ +(saque?'<tr><td>Saque disponível na Caixa (sem a multa)</td><td class="v">'+brl(saque)+'</td></tr>':'')+'</tbody></table></div>'
+ +'<h3 style="margin-top:16px">Férias por período aquisitivo</h3><small>'+(tabF.length?tabF.join('<br>'):'Nenhum período aquisitivo completo.')+(fpM?'<br>Período em andamento: '+fpM+'/12 avos.':'')+'</small>'
+ +al.map(a=>'<div class="al">'+a+'</div>').join('')
+ +'<div class="row noprint"><button id="pdf">Exportar (PDF / imprimir)</button><button class="s" id="cp">Copiar resumo</button><span id="cm" class="sub"></span></div>';
+ const resumo='SIMULAÇÃO DE RESCISÃO\nAdmissão: '+fmt(adm)+' | Saída: '+fmt(sai)+' | Salário: '+brl(sal)+'\n\nPROVENTOS\n'+P.map(x=>x[0]+': '+brl(x[1])).join('\n')+'\nTotal: '+brl(tp)+'\n\nDESCONTOS\n'+(X.map(x=>x[0]+': '+brl(x[1])).join('\n')||'—')+'\nTotal: '+brl(td)+'\n\nRescisão líquida: '+brl(liq)+'\nFGTS saldo: '+brl(fg)+' | Multa: '+brl(multa)+'\nTOTAL: '+brl(total)+'\n\nSimulação estimada, sem valor legal.';
+ $('pdf').onclick=()=>window.print();
+ $('cp').onclick=async()=>{try{await navigator.clipboard.writeText(resumo);$('cm').textContent='Resumo copiado.'}catch(e){$('cm').textContent='Não foi possível copiar. Use Exportar (PDF).'}};
+ R.scrollIntoView({behavior:'smooth'})};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</body>
+</html>
